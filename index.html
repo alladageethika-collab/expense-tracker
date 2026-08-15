@@ -1,0 +1,201 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Expense Tracker</title>
+  <!-- Link to stylesheet (create style.css later) -->
+  <link rel="stylesheet" href="style.css" />
+  <!-- Link to JavaScript (create script.js later) -->
+  <script src="script.js" defer></script>
+</head>
+<body>
+  <!-- Site header and navigation -->
+  <header>
+    <nav aria-label="Primary" class="navbar">
+      <div class="container navbar-brand">
+        <a href="#" class="brand">Expense Tracker</a>
+      </div>
+      <ul class="container navbar-menu">
+        <li><a href="#dashboard">Dashboard</a></li>
+        <li><a href="#add-expense">Add Expense</a></li>
+        <li><a href="#add-income">Add Income</a></li>
+        <li><a href="#expenses-list">Expenses</a></li>
+      </ul>
+    </nav>
+  </header>
+
+  <main class="container">
+    <!-- Dashboard summary cards -->
+    <section id="dashboard" aria-labelledby="dashboard-heading">
+      <h2 id="dashboard-heading">Dashboard</h2>
+      <p class="visually-hidden" id="dashboard-description">Quick summary of your balance, income and expenses.</p>
+
+      <div class="cards" role="region" aria-label="Summary cards">
+        <!-- Total Balance -->
+        <article class="card" id="total-balance" aria-labelledby="balance-title">
+          <h3 id="balance-title">Total Balance</h3>
+          <p class="amount" aria-live="polite">$0.00</p>
+          <p class="card-note">Income minus expenses</p>
+        </article>
+
+        <!-- Income -->
+        <article class="card" id="total-income" aria-labelledby="income-title">
+          <h3 id="income-title">Income</h3>
+          <p class="amount" aria-live="polite">$0.00</p>
+          <p class="card-note">Total income</p>
+        </article>
+
+        <!-- Expenses -->
+        <article class="card" id="total-expenses" aria-labelledby="expenses-title">
+          <h3 id="expenses-title">Expenses</h3>
+          <p class="amount" aria-live="polite">$0.00</p>
+          <p class="card-note">Total expenses</p>
+        </article>
+      </div>
+    </section>
+
+    <!-- Add Expense form -->
+    <section id="add-expense" aria-labelledby="add-expense-heading">
+      <h2 id="add-expense-heading">Add Expense</h2>
+
+      <!-- Beginner-friendly form with labels and simple inputs -->
+      <form id="expense-form" autocomplete="off">
+        <div class="form-row">
+          <label for="description">Description</label>
+          <input type="text" id="description" name="description" placeholder="e.g., Grocery shopping" required />
+        </div>
+
+        <div class="form-row">
+          <label for="amount">Amount</label>
+          <input type="number" id="amount" name="amount" placeholder="0.00" step="0.01" min="0" required />
+        </div>
+
+        <div class="form-row">
+          <label for="category">Category</label>
+          <select id="category" name="category">
+            <option value="">-- Select category --</option>
+            <option value="food">Food</option>
+            <option value="transport">Transport</option>
+            <option value="utilities">Utilities</option>
+            <option value="entertainment">Entertainment</option>
+            <option value="other">Other</option>
+          </select>
+        </div>
+
+        <div class="form-row">
+          <label for="date">Date</label>
+          <input type="date" id="date" name="date" />
+        </div>
+
+        <div class="form-actions">
+          <button type="submit">Add Expense</button>
+          <button type="reset">Reset</button>
+        </div>
+      </form>
+    </section>
+
+    <!-- Add Income form (new) -->
+    <section id="add-income" aria-labelledby="add-income-heading">
+      <h2 id="add-income-heading">Add Income</h2>
+
+      <!-- Simple income form: description, amount, date -->
+      <form id="income-form" autocomplete="off">
+        <div class="form-row">
+          <label for="income-description">Description</label>
+          <input type="text" id="income-description" name="income-description" placeholder="e.g., Salary" required />
+        </div>
+
+        <div class="form-row">
+          <label for="income-amount">Amount</label>
+          <input type="number" id="income-amount" name="income-amount" placeholder="0.00" step="0.01" min="0" required />
+        </div>
+
+        <div class="form-row">
+          <label for="income-date">Date</label>
+          <input type="date" id="income-date" name="income-date" />
+        </div>
+
+        <div class="form-actions">
+          <button type="submit">Add Income</button>
+          <button type="reset">Reset</button>
+        </div>
+      </form>
+    </section>
+
+    <!-- Income list (new) - placed before expenses so it appears above expenses on wide screens -->
+    <section id="income-list" aria-labelledby="income-heading">
+      <h2 id="income-heading">Income</h2>
+      <p class="help-text">List of recorded income entries.</p>
+
+      <div class="table-wrap">
+        <table id="incomes-table">
+          <caption class="visually-hidden">List of incomes</caption>
+          <thead>
+            <tr>
+              <th scope="col">Date</th>
+              <th scope="col">Description</th>
+              <th scope="col">Amount</th>
+              <th scope="col">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <!-- Rows will be added here by script.js when incomes are added -->
+          </tbody>
+        </table>
+
+        <p id="no-incomes-message">No income recorded yet.</p>
+      </div>
+    </section>
+
+    <!-- Expense list section -->
+    <section id="expenses-list" aria-labelledby="expenses-heading">
+      <h2 id="expenses-heading">Expenses</h2>
+      <p class="help-text">Below is a list of recorded expenses. Use the actions to edit or delete items.</p>
+
+      <!-- Category filter control (shows All by default) -->
+      <div class="table-controls">
+        <label for="category-filter" class="visually-hidden">Filter by category</label>
+        <select id="category-filter" aria-label="Filter expenses by category">
+          <option value="all">All Categories</option>
+          <option value="food">Food</option>
+          <option value="transport">Transport</option>
+          <option value="utilities">Utilities</option>
+          <option value="entertainment">Entertainment</option>
+          <option value="other">Other</option>
+        </select>
+      </div>
+
+      <!-- Table is a clear beginner-friendly way to show list of expenses -->
+      <div class="table-wrap">
+        <table id="expenses-table">
+          <caption class="visually-hidden">List of expenses</caption>
+          <thead>
+            <tr>
+              <th scope="col">Date</th>
+              <th scope="col">Description</th>
+              <th scope="col">Category</th>
+              <th scope="col">Amount</th>
+              <th scope="col">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <!-- Rows will be added here by script.js when expenses are added -->
+          </tbody>
+        </table>
+
+        <!-- Message shown when there are no expenses yet -->
+        <p id="no-expenses-message">No expenses recorded yet.</p>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <p>&copy; <span id="year">2026</span> Expense Tracker — Built simply for learning</p>
+    </div>
+  </footer>
+
+  <!-- script.js is linked in the head with defer; JavaScript logic will go there later -->
+</body>
+</html>
