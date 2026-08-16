@@ -100,20 +100,45 @@
     // If we're on the signup page, wire up signup form
     const signupForm = document.getElementById('signup-form');
     if (signupForm) {
-      signupForm.addEventListener('submit', (e) => {
-        e.preventDefault();
-        const email = (document.getElementById('signup-email').value || '').trim();
-        const password = (document.getElementById('signup-password').value || '');
-        const res = signUp(email, password);
-        if (res.ok) {
-          // After successful signup, redirect the user to the login page so
-          // they can authenticate. This enforces that signup != automatic login.
-          alert('Account created. Please log in.');
-          window.location.href = 'login.html';
-        } else {
-          alert(res.error || 'Sign up failed');
-        }
-      });
+      // Prefer Supabase signup if a supabaseClient with auth.signUp exists.
+      if (typeof supabaseClient !== 'undefined' && supabaseClient && supabaseClient.auth && typeof supabaseClient.auth.signUp === 'function') {
+        signupForm.addEventListener('submit', async (e) => {
+          e.preventDefault();
+          const email = (document.getElementById('signup-email').value || '').trim();
+          const password = (document.getElementById('signup-password').value || '');
+          try {
+            const { data, error } = await supabaseClient.auth.signUp({ email, password });
+            if (error) {
+              // Supabase error object may be a plain string or an object with message
+              alert(error.message || String(error) || 'Sign up failed');
+              return;
+            }
+
+            // Successful signup. Notify user and redirect to login page.
+            // Supabase may require email confirmation; message informs user.
+            alert('Account created. Please check your email (if required) and then log in.');
+            window.location.href = 'login.html';
+          } catch (err) {
+            alert(err && err.message ? err.message : String(err) || 'Sign up failed');
+          }
+        });
+      } else {
+        // Fallback to local demo signup
+        signupForm.addEventListener('submit', (e) => {
+          e.preventDefault();
+          const email = (document.getElementById('signup-email').value || '').trim();
+          const password = (document.getElementById('signup-password').value || '');
+          const res = signUp(email, password);
+          if (res.ok) {
+            // After successful signup, redirect the user to the login page so
+            // they can authenticate. This enforces that signup != automatic login.
+            alert('Account created. Please log in.');
+            window.location.href = 'login.html';n
+          } else {
+            alert(res.error || 'Sign up failed');
+          }
+        });
+      }
     }
 
     // If we're on the dashboard page, initialize dashboard features but only
