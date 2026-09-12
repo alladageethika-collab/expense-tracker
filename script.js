@@ -130,7 +130,7 @@ const supabaseClient = window.supabase.createClient(
         return;
       }
 
-      const { error } = await supabaseClient.functions.invoke('send-email-alert', {
+      const { error } = await supabaseClient.functions.invoke('resend-email', {
         body: {
           type,
           email: payload.email || user.email,
