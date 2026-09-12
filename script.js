@@ -60,12 +60,20 @@ const supabaseClient = window.supabase.createClient(
       const pageName = window.location.pathname.split('/').pop() || 'index.html';
       const userId = session && session.user ? session.user.id : null;
 
+      console.log('Auth state changed:', event, session);
       console.log('Auth state event:', {
         event,
         pageName,
         sessionExists: !!session,
         userId
       });
+
+      if ((pageName === 'login.html' || pageName === 'signup.html') && event === 'SIGNED_IN' && session && session.user) {
+        console.log('OAuth callback session:', session);
+        console.log('Redirecting authenticated OAuth user to dashboard.html');
+        window.location.replace('dashboard.html');
+        return;
+      }
 
       if (pageName === 'dashboard.html' && event === 'SIGNED_OUT' && !session && !dashboardInitialized) {
         console.error('REDIRECTING TO LOGIN - REASON:', {
@@ -923,6 +931,8 @@ const supabaseClient = window.supabase.createClient(
 
   async function handleGoogleSignIn() {
     try {
+      registerAuthRedirectListener();
+
       const redirectUrl = getGoogleAuthRedirectUrl();
       console.log('Google OAuth redirectTo:', redirectUrl);
 
