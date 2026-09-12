@@ -23,8 +23,8 @@ const supabaseClient = window.supabase.createClient(
   let expenses = [];
   let incomes = [];
   let currentCategoryFilter = 'all';
-  let selectedMonth = 'all';
-  let selectedYear = 'all';
+  let selectedMonth = String(new Date().getMonth() + 1);
+  let selectedYear = String(new Date().getFullYear());
   let searchTerm = '';
   let expenseCategoryChart = null;
   let incomeExpenseChart = null;
@@ -212,8 +212,8 @@ const supabaseClient = window.supabase.createClient(
   }
 
   function getBudgetTargetPeriod() {
-    const month = selectedMonth === 'all' ? new Date().getMonth() + 1 : Number(selectedMonth);
-    const year = selectedYear === 'all' ? new Date().getFullYear() : Number(selectedYear);
+    const month = selectedMonth && selectedMonth !== 'all' ? Number(selectedMonth) : new Date().getMonth() + 1;
+    const year = selectedYear && selectedYear !== 'all' ? Number(selectedYear) : new Date().getFullYear();
 
     return { month, year };
   }
@@ -236,40 +236,99 @@ const supabaseClient = window.supabase.createClient(
     const budgetSpentEl = document.getElementById('budget-total-spent');
     const budgetRemainingEl = document.getElementById('budget-remaining');
     const budgetWarningEl = document.getElementById('budget-warning');
+    const progressFillEl = document.getElementById('budget-progress-fill');
+    const progressLabelEl = document.getElementById('budget-progress-label');
+    const budgetStatusEl = document.getElementById('budget-status');
+
+    if (!monthlyBudgetValueEl && !budgetSpentEl && !budgetRemainingEl && !budgetWarningEl && !progressFillEl && !progressLabelEl && !budgetStatusEl) {
+      return;
+    }
 
     const budgetAmount = currentBudget ? Number(currentBudget.amount || 0) : 0;
     const totalSpent = getVisibleExpensesForBudget().reduce((sum, item) => sum + Number(item.amount || 0), 0);
     const remaining = budgetAmount - totalSpent;
+    const pct = budgetAmount > 0 ? (totalSpent / budgetAmount) * 100 : 0;
+    const clampedPct = Math.min(Math.max(pct, 0), 100);
 
     if (monthlyBudgetValueEl) monthlyBudgetValueEl.textContent = formatCurrency(budgetAmount);
     if (budgetSpentEl) budgetSpentEl.textContent = formatCurrency(totalSpent);
     if (budgetRemainingEl) budgetRemainingEl.textContent = formatCurrency(remaining);
 
+    if (progressFillEl) {
+      const finalWidth = budgetAmount > 0 ? `${Math.min(clampedPct, 100)}%` : '0%';
+      progressFillEl.style.width = finalWidth;
+      progressFillEl.classList.toggle('over-budget', totalSpent > budgetAmount);
+    }
+
+    if (progressLabelEl) {
+      progressLabelEl.textContent = budgetAmount > 0
+        ? `${formatCurrency(totalSpent)} spent out of ${formatCurrency(budgetAmount)} (${Math.round(clampedPct)}%)`
+        : `${formatCurrency(totalSpent)} spent out of ${formatCurrency(0)} (0%)`;
+    }
+
+    if (budgetStatusEl) {
+      let message = 'Great! You are managing your budget well.';
+      let statusClass = 'status-good';
+
+      if (totalSpent > budgetAmount) {
+        message = `Budget exceeded! You are over by ${formatCurrency(Math.abs(remaining))}.`;
+        statusClass = 'status-danger';
+      } else if (pct >= 80) {
+        message = 'Careful! You are close to your budget limit.';
+        statusClass = 'status-warning';
+      } else if (pct >= 50) {
+        message = 'You have used more than half of your budget.';
+        statusClass = 'status-warning';
+      }
+
+      budgetStatusEl.textContent = message;
+      budgetStatusEl.className = `status-badge ${statusClass}`;
+    }
+
     if (budgetWarningEl) {
       const isOverBudget = remaining < 0;
       budgetWarningEl.hidden = !isOverBudget;
       budgetWarningEl.textContent = isOverBudget
-        ? `Warning: Your spending is above your monthly budget by ${formatCurrency(Math.abs(remaining))}.`
-        : 'Warning: Your spending is above your monthly budget.';
+        ? `You have exceeded your monthly budget by ${formatCurrency(Math.abs(remaining))}`
+        : 'You have exceeded your monthly budget.';
     }
   }
 
   async function loadBudgetForSelectedMonth(user) {
-    const { data, error } = await supabaseClient
-      .from('budgets')
-      .select('*')
-      .eq('user_id', user.id);
-
-    if (error) {
-      console.error('Could not load budget:', error.message);
-      currentBudget = null;
-      updateBudgetSummary();
-      return;
-    }
+    if (!user || !user.id) return;
 
     const { month, year } = getBudgetTargetPeriod();
-    currentBudget = (data || []).find((item) => Number(item.month) === month && Number(item.year) === year) || null;
+
+    const { data: budgetData, error: budgetError } = await supabaseClient
+      .from('budgets')
+      .select('*')
+      .eq('user_id', user.id)
+      .eq('month', month)
+      .eq('year', year)
+      .maybeSingle();
+
+    if (budgetError) {
+      console.error('Could not load budget:', budgetError.message);
+      currentBudget = null;
+    } else {
+      currentBudget = budgetData || null;
+    }
+
+    const { data: expenseData, error: expenseError } = await supabaseClient
+      .from('expenses')
+      .select('*')
+      .eq('user_id', user.id)
+      .order('date', { ascending: false });
+
+    if (expenseError) {
+      console.error('Could not load expenses for budget:', expenseError.message);
+      expenses = [];
+    } else {
+      expenses = expenseData || [];
+    }
+
     updateBudgetSummary();
+    renderExpenses();
   }
 
   async function saveBudgetForSelectedMonth(user) {
@@ -838,10 +897,17 @@ const supabaseClient = window.supabase.createClient(
 
     document.body.classList.toggle('dark-theme', theme === 'dark');
 
-    const themeToggleBtn = document.getElementById('theme-toggle');
-    if (themeToggleBtn) {
-      themeToggleBtn.textContent = theme === 'dark' ? '☀️ Light' : '🌙 Dark';
-      themeToggleBtn.setAttribute('aria-label', theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode');
+    const lightThemeBtn = document.getElementById('theme-light');
+    const darkThemeBtn = document.getElementById('theme-dark');
+
+    if (lightThemeBtn) {
+      lightThemeBtn.classList.toggle('active', theme === 'light');
+      lightThemeBtn.setAttribute('aria-pressed', String(theme === 'light'));
+    }
+
+    if (darkThemeBtn) {
+      darkThemeBtn.classList.toggle('active', theme === 'dark');
+      darkThemeBtn.setAttribute('aria-pressed', String(theme === 'dark'));
     }
   }
 
@@ -877,6 +943,173 @@ const supabaseClient = window.supabase.createClient(
     }
   }
 
+  function bindRouteButtons() {
+    document.querySelectorAll('[data-route]').forEach((button) => {
+      button.addEventListener('click', () => {
+        const target = button.getAttribute('data-route');
+        if (target) {
+          window.location.href = target;
+        }
+      });
+    });
+  }
+
+  function initExpensesPage(user) {
+    const expenseForm = document.getElementById('expense-form');
+    const categoryFilterSelect = document.getElementById('category-filter');
+    const monthFilterSelect = document.getElementById('month-filter');
+    const yearFilterSelect = document.getElementById('year-filter');
+    const expenseSearchInput = document.getElementById('expense-search');
+
+    if (categoryFilterSelect) {
+      categoryFilterSelect.addEventListener('change', (event) => {
+        currentCategoryFilter = event.target.value || 'all';
+        renderExpenses();
+        updateTotals();
+      });
+    }
+
+    if (expenseSearchInput) {
+      expenseSearchInput.addEventListener('input', (event) => {
+        searchTerm = event.target.value || '';
+        renderExpenses();
+        updateTotals();
+      });
+    }
+
+    if (monthFilterSelect) {
+      monthFilterSelect.addEventListener('change', async (event) => {
+        selectedMonth = event.target.value || 'all';
+        renderExpenses();
+        renderIncomes();
+        updateTotals();
+        await loadBudgetForSelectedMonth(user);
+      });
+    }
+
+    if (yearFilterSelect) {
+      yearFilterSelect.addEventListener('change', async (event) => {
+        selectedYear = event.target.value || 'all';
+        renderExpenses();
+        renderIncomes();
+        updateTotals();
+        await loadBudgetForSelectedMonth(user);
+      });
+    }
+
+    if (expenseForm) {
+      expenseForm.addEventListener('submit', async (event) => {
+        event.preventDefault();
+
+        const description = (expenseForm.querySelector('#description').value || '').trim();
+        const amountRaw = expenseForm.querySelector('#amount').value;
+        const category = expenseForm.querySelector('#category').value || '';
+        const date = expenseForm.querySelector('#date').value || new Date().toISOString().slice(0, 10);
+
+        if (!description) {
+          alert('Please enter a description.');
+          return;
+        }
+
+        const amount = parseFloat(amountRaw);
+        if (isNaN(amount) || amount <= 0) {
+          alert('Please enter a valid amount greater than 0.');
+          return;
+        }
+
+        await addExpenseToDatabase(user, {
+          description,
+          amount: Number(amount.toFixed(2)),
+          category,
+          date
+        });
+
+        expenseForm.reset();
+      });
+    }
+
+    loadExpensesForCurrentUser(user).then(() => {
+      populateYearFilter();
+      renderExpenses();
+      updateTotals();
+    });
+  }
+
+  function initIncomePage(user) {
+    const incomeForm = document.getElementById('income-form');
+
+    if (incomeForm) {
+      incomeForm.addEventListener('submit', async (event) => {
+        event.preventDefault();
+
+        const description = (incomeForm.querySelector('#income-description').value || '').trim();
+        const amountRaw = incomeForm.querySelector('#income-amount').value;
+        const date = incomeForm.querySelector('#income-date').value || new Date().toISOString().slice(0, 10);
+
+        if (!description) {
+          alert('Please enter a description for the income.');
+          return;
+        }
+
+        const amount = parseFloat(amountRaw);
+        if (isNaN(amount) || amount <= 0) {
+          alert('Please enter a valid income amount greater than 0.');
+          return;
+        }
+
+        await addIncomeToDatabase(user, {
+          description,
+          amount: Number(amount.toFixed(2)),
+          date
+        });
+
+        incomeForm.reset();
+      });
+    }
+
+    loadIncomesForCurrentUser(user).then(() => {
+      renderIncomes();
+      updateTotals();
+    });
+  }
+
+  function initBudgetPage(user) {
+    const budgetForm = document.getElementById('budget-form');
+    const budgetMonthSelect = document.getElementById('budget-month-select');
+    const budgetYearSelect = document.getElementById('budget-year-select');
+
+    if (budgetMonthSelect) {
+      budgetMonthSelect.value = selectedMonth;
+      budgetMonthSelect.addEventListener('change', async (event) => {
+        selectedMonth = event.target.value || String(new Date().getMonth() + 1);
+        await loadBudgetForSelectedMonth(user);
+      });
+    }
+
+    if (budgetYearSelect) {
+      const yearOptions = [];
+      const currentYear = new Date().getFullYear();
+      for (let year = currentYear - 5; year <= currentYear + 5; year += 1) {
+        yearOptions.push(`<option value="${year}">${year}</option>`);
+      }
+      budgetYearSelect.innerHTML = yearOptions.join('');
+      budgetYearSelect.value = selectedYear;
+      budgetYearSelect.addEventListener('change', async (event) => {
+        selectedYear = event.target.value || String(new Date().getFullYear());
+        await loadBudgetForSelectedMonth(user);
+      });
+    }
+
+    if (budgetForm) {
+      budgetForm.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        await saveBudgetForSelectedMonth(user);
+      });
+    }
+
+    loadBudgetForSelectedMonth(user);
+  }
+
   function initDashboard(user) {
     const expenseForm = document.getElementById('expense-form');
     const incomeForm = document.getElementById('income-form');
@@ -884,9 +1117,6 @@ const supabaseClient = window.supabase.createClient(
     const monthFilterSelect = document.getElementById('month-filter');
     const yearFilterSelect = document.getElementById('year-filter');
     const expenseSearchInput = document.getElementById('expense-search');
- 
-      
-    
 
     if (categoryFilterSelect) {
       categoryFilterSelect.addEventListener('change', (event) => {
@@ -1009,22 +1239,26 @@ const supabaseClient = window.supabase.createClient(
 
   applySavedTheme();
 
-  const themeToggleBtn = document.getElementById('theme-toggle');
-  if (themeToggleBtn) {
-    themeToggleBtn.addEventListener('click', () => {
-      const isDark = document.body.classList.contains('dark-theme');
-      const nextTheme = isDark ? 'light' : 'dark';
+  const lightThemeBtn = document.getElementById('theme-light');
+  const darkThemeBtn = document.getElementById('theme-dark');
 
-      document.body.classList.toggle('dark-theme', nextTheme === 'dark');
-      localStorage.setItem('expense-tracker-theme', nextTheme);
-
-      themeToggleBtn.textContent = nextTheme === 'dark' ? '☀️ Light' : '🌙 Dark';
-      themeToggleBtn.setAttribute(
-        'aria-label',
-        nextTheme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'
-      );
+  if (lightThemeBtn) {
+    lightThemeBtn.addEventListener('click', () => {
+      document.body.classList.remove('dark-theme');
+      localStorage.setItem('expense-tracker-theme', 'light');
+      applySavedTheme();
     });
   }
+
+  if (darkThemeBtn) {
+    darkThemeBtn.addEventListener('click', () => {
+      document.body.classList.add('dark-theme');
+      localStorage.setItem('expense-tracker-theme', 'dark');
+      applySavedTheme();
+    });
+  }
+
+  bindRouteButtons();
 
   document.addEventListener('DOMContentLoaded', async () => {
     const loginForm = document.getElementById('login-form');
@@ -1088,15 +1322,10 @@ const supabaseClient = window.supabase.createClient(
       }
     }
 
-    if (isDashboardPage) {
-      const { data: { session }, error } = await supabaseClient.auth.getSession();
+    const protectedPages = ['dashboard.html', 'expenses.html', 'income.html', 'budget.html'];
 
-      console.log('Dashboard session check:', {
-        page: currentPage,
-        sessionExists: !!session,
-        userId: session && session.user ? session.user.id : null,
-        error: error ? error.message : null
-      });
+    if (protectedPages.includes(currentPage)) {
+      const { data: { session }, error } = await supabaseClient.auth.getSession();
 
       if (error) {
         console.error('Session error:', error.message);
@@ -1115,12 +1344,6 @@ const supabaseClient = window.supabase.createClient(
 
       const user = session.user;
 
-      if (dashboardInitialized) {
-        return;
-      }
-
-      dashboardInitialized = true;
-
       const logoutBtn = document.getElementById('logout-btn');
       if (logoutBtn) {
         logoutBtn.addEventListener('click', async () => {
@@ -1128,16 +1351,36 @@ const supabaseClient = window.supabase.createClient(
         });
       }
 
-      const welcomeKey = `welcome-email-sent-${user.id}`;
-      if (!localStorage.getItem(welcomeKey)) {
-        await sendEmailAlert('welcome', {
-          email: user.email
-        });
-        localStorage.setItem(welcomeKey, 'true');
+      if (currentPage === 'dashboard.html') {
+        if (dashboardInitialized) {
+          return;
+        }
+
+        dashboardInitialized = true;
+
+        const welcomeKey = `welcome-email-sent-${user.id}`;
+        if (!localStorage.getItem(welcomeKey)) {
+          await sendEmailAlert('welcome', {
+            email: user.email
+          });
+          localStorage.setItem(welcomeKey, 'true');
+        }
+
+        console.log('Initializing dashboard for user:', user.id);
+        initDashboard(user);
       }
 
-      console.log('Initializing dashboard for user:', user.id);
-      initDashboard(user);
+      if (currentPage === 'expenses.html') {
+        initExpensesPage(user);
+      }
+
+      if (currentPage === 'income.html') {
+        initIncomePage(user);
+      }
+
+      if (currentPage === 'budget.html') {
+        initBudgetPage(user);
+      }
     }
 
     if (googleLoginBtn) {

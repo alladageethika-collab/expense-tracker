@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Expense Tracker — Income</title>
+  <link rel="stylesheet" href="style.css" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="script.js" defer></script>
+</head>
+<body>
+  <div class="app-layout">
+    <aside class="sidebar">
+      <div class="brand-block">
+        <div class="brand-mark">€</div>
+        <div>
+          <div class="brand-name">Expense Tracker</div>
+        </div>
+      </div>
+
+      <nav class="sidebar-nav" aria-label="Sidebar navigation">
+        <button type="button" class="nav-link-btn" data-route="dashboard.html">Dashboard</button>
+        <button type="button" class="nav-link-btn" data-route="expenses.html">Expenses</button>
+        <button type="button" class="nav-link-btn active" data-route="income.html">Income</button>
+        <button type="button" class="nav-link-btn" data-route="budget.html">Budget</button>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div class="theme-section" aria-label="Theme selector">
+          <div class="theme-label">Theme</div>
+          <div class="theme-segmented" role="group" aria-label="Choose theme">
+            <button id="theme-light" type="button" class="theme-option active" data-theme="light">Light</button>
+            <button id="theme-dark" type="button" class="theme-option" data-theme="dark">Dark</button>
+          </div>
+        </div>
+        <button id="logout-btn" class="logout-btn" type="button">Logout</button>
+      </div>
+    </aside>
+
+    <main class="content-area">
+      <header class="page-header">
+        <div>
+          <p class="eyebrow">Income Tracking</p>
+          <h1>Income</h1>
+        </div>
+      </header>
+
+      <section class="panel" aria-labelledby="income-form-heading">
+        <h2 id="income-form-heading">Add New Income</h2>
+
+        <form id="income-form" autocomplete="off">
+          <div class="form-row">
+            <label for="income-description">Description</label>
+            <input type="text" id="income-description" name="income-description" placeholder="e.g., Salary" required />
+          </div>
+
+          <div class="form-row">
+            <label for="income-amount">Amount</label>
+            <input type="number" id="income-amount" name="income-amount" placeholder="0.00" step="0.01" min="0" required />
+          </div>
+
+          <div class="form-row">
+            <label for="income-date">Date</label>
+            <input type="date" id="income-date" name="income-date" />
+          </div>
+
+          <div class="form-actions">
+            <button type="submit">Add Income</button>
+            <button type="reset">Reset</button>
+          </div>
+        </form>
+      </section>
+
+      <section class="panel" aria-labelledby="income-list-heading">
+        <h2 id="income-list-heading">Income History</h2>
+
+        <div class="table-wrap">
+          <table id="incomes-table">
+            <caption class="visually-hidden">List of incomes</caption>
+            <thead>
+              <tr>
+                <th scope="col">Date</th>
+                <th scope="col">Description</th>
+                <th scope="col">Amount</th>
+                <th scope="col">Actions</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+
+          <p id="no-incomes-message">No income recorded yet.</p>
+        </div>
+      </section>
+    </main>
+  </div>
+</body>
+</html>

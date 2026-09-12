@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Expense Tracker — Budget</title>
+  <link rel="stylesheet" href="style.css" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="script.js" defer></script>
+</head>
+<body>
+  <div class="app-layout">
+    <aside class="sidebar">
+      <div class="brand-block">
+        <div class="brand-mark">€</div>
+        <div>
+          <div class="brand-name">Expense Tracker</div>
+        </div>
+      </div>
+
+      <nav class="sidebar-nav" aria-label="Sidebar navigation">
+        <button type="button" class="nav-link-btn" data-route="dashboard.html">Dashboard</button>
+        <button type="button" class="nav-link-btn" data-route="expenses.html">Expenses</button>
+        <button type="button" class="nav-link-btn" data-route="income.html">Income</button>
+        <button type="button" class="nav-link-btn active" data-route="budget.html">Budget</button>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div class="theme-section" aria-label="Theme selector">
+          <div class="theme-label">Theme</div>
+          <div class="theme-segmented" role="group" aria-label="Choose theme">
+            <button id="theme-light" type="button" class="theme-option active" data-theme="light">Light</button>
+            <button id="theme-dark" type="button" class="theme-option" data-theme="dark">Dark</button>
+          </div>
+        </div>
+        <button id="logout-btn" class="logout-btn" type="button">Logout</button>
+      </div>
+    </aside>
+
+    <main class="content-area">
+      <div class="budget-page-shell">
+        <header class="page-header budget-header">
+          <div>
+            <p class="eyebrow">Planning</p>
+            <h1>Monthly Budget</h1>
+            <p class="budget-tagline">Plan and track your spending for the month.</p>
+          </div>
+        </header>
+
+        <div class="budget-controls">
+          <label class="filter-field">
+            <span>Month</span>
+            <select id="budget-month-select" aria-label="Select month">
+              <option value="1">January</option>
+              <option value="2">February</option>
+              <option value="3">March</option>
+              <option value="4">April</option>
+              <option value="5">May</option>
+              <option value="6">June</option>
+              <option value="7">July</option>
+              <option value="8">August</option>
+              <option value="9">September</option>
+              <option value="10">October</option>
+              <option value="11">November</option>
+              <option value="12">December</option>
+            </select>
+          </label>
+
+          <label class="filter-field">
+            <span>Year</span>
+            <select id="budget-year-select" aria-label="Select year"></select>
+          </label>
+        </div>
+
+        <section class="panel budget-setup-card" aria-labelledby="budget-form-heading">
+          <div class="section-header compact-header">
+            <h2 id="budget-form-heading">Budget Setup</h2>
+          </div>
+
+          <form id="budget-form" autocomplete="off" class="budget-form">
+            <div class="budget-input-wrap">
+              <label for="budget-amount">Monthly Budget Amount</label>
+              <div class="currency-input">
+                <span>$</span>
+                <input type="number" id="budget-amount" name="budget-amount" placeholder="Enter your budget amount" step="0.01" min="0" />
+              </div>
+            </div>
+
+            <button type="submit" class="budget-save-btn">Save Budget</button>
+          </form>
+        </section>
+
+        <section class="budget-overview" aria-labelledby="budget-overview-heading">
+          <div class="section-header compact-header">
+            <h2 id="budget-overview-heading">Budget Overview</h2>
+          </div>
+
+          <div class="budget-summary-grid">
+            <article class="budget-summary-card budget-card-primary">
+              <div class="summary-label">Monthly Budget</div>
+              <div class="summary-value" id="monthly-budget-value">$0.00</div>
+              <div class="summary-caption">Your planned spending limit</div>
+            </article>
+
+            <article class="budget-summary-card budget-card-danger">
+              <div class="summary-label">Total Spent</div>
+              <div class="summary-value" id="budget-total-spent">$0.00</div>
+              <div class="summary-caption">Amount spent this month</div>
+            </article>
+
+            <article class="budget-summary-card budget-card-success">
+              <div class="summary-label">Remaining</div>
+              <div class="summary-value" id="budget-remaining">$0.00</div>
+              <div class="summary-caption">Amount left in your budget</div>
+            </article>
+          </div>
+        </section>
+
+        <section class="panel budget-progress-card" aria-labelledby="budget-progress-heading">
+          <div class="section-header compact-header">
+            <h2 id="budget-progress-heading">Budget Progress</h2>
+          </div>
+
+          <div class="progress-header">
+            <span id="budget-progress-label">$0.00 spent out of $0.00 (0%)</span>
+          </div>
+
+          <div class="progress-track" aria-label="Budget usage progress">
+            <div id="budget-progress-fill" class="progress-fill" style="width: 0%"></div>
+          </div>
+
+          <div id="budget-status" class="status-badge status-good">Great! You are managing your budget well.</div>
+          <div id="budget-warning" class="budget-warning" hidden>You have exceeded your monthly budget.</div>
+        </section>
+      </div>
+    </main>
+  </div>
+</body>
+</html>
