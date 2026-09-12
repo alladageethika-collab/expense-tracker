@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Sign up — Expense Tracker</title>
   <link rel="stylesheet" href="style.css" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="script.js" defer></script>
 </head>
 <body>
@@ -30,8 +31,12 @@
         </div>
       </form>
 
+      <div class="divider" aria-hidden="true"><span>or</span></div>
+      <button id="google-signup-btn" type="button" class="google-button">Continue with Google</button>
+
       <p class="help-text" style="margin-top:1rem;">This demo stores accounts locally in your browser. It is a client-side mock — not secure for real accounts.</p>
     </section>
   </main>
+ 
 </body>
 </html>

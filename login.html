@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Login — Expense Tracker</title>
   <link rel="stylesheet" href="style.css" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="script.js" defer></script>
 </head>
 <body>
@@ -29,6 +30,27 @@
           <a href="signup.html" class="action-btn" style="text-decoration:none;">Sign up</a>
         </div>
       </form>
+
+      <div class="divider" aria-hidden="true"><span>or</span></div>
+      <button id="google-login-btn" type="button" class="google-button">Continue with Google</button>
+
+      <p class="help-text" style="margin-top:0.75rem;">
+        <button id="show-forgot-password" type="button" class="link-button">Forgot Password?</button>
+      </p>
+
+      <div id="forgot-password-box" hidden style="margin-top:1rem;">
+        <form id="forgot-password-form" autocomplete="off">
+          <div class="form-row">
+            <label for="reset-email">Email address</label>
+            <input type="email" id="reset-email" name="reset-email" placeholder="you@example.com" required />
+          </div>
+
+          <div class="form-actions">
+            <button type="submit">Send Reset Link</button>
+          </div>
+        </form>
+        <p id="forgot-password-message" class="help-text" style="margin-top:0.75rem;"></p>
+      </div>
 
       <p class="help-text" style="margin-top:1rem;">Demo accounts are stored locally in your browser. This demo authentication is client-side only and not secure — do not use real passwords.</p>
     </section>

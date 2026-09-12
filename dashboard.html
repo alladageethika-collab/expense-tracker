@@ -5,6 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Expense Tracker — Dashboard</title>
   <link rel="stylesheet" href="style.css" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="script.js" defer></script>
 </head>
 <body>
@@ -14,6 +16,7 @@
         <a href="dashboard.html" class="brand">Expense Tracker</a>
       </div>
       <ul class="container navbar-menu">
+        <li><button id="theme-toggle" class="theme-toggle" type="button" aria-label="Toggle light and dark mode">🌙 Dark</button></li>
         <li><a href="#dashboard">Dashboard</a></li>
         <li><a href="#add-expense">Add Expense</a></li>
         <li><a href="#add-income">Add Income</a></li>
@@ -27,6 +30,7 @@
     <!-- Dashboard summary cards -->
     <section id="dashboard" aria-labelledby="dashboard-heading">
       <h2 id="dashboard-heading">Dashboard</h2>
+      <p id="welcome-message" class="welcome-message">Welcome back 👋</p>
       <p class="visually-hidden" id="dashboard-description">Quick summary of your balance, income and expenses.</p>
 
       <div class="cards" role="region" aria-label="Summary cards">
@@ -50,6 +54,60 @@
           <p class="amount" aria-live="polite">$0.00</p>
           <p class="card-note">Total expenses</p>
         </article>
+      </div>
+    </section>
+
+    <section class="charts-section" aria-labelledby="charts-heading">
+      <h2 id="charts-heading">Charts</h2>
+
+      <div class="chart-grid">
+        <div class="chart-card">
+          <h3>Expenses by Category</h3>
+          <canvas id="expense-category-chart" aria-label="Expense by category chart"></canvas>
+        </div>
+
+        <div class="chart-card">
+          <h3>Income vs Expense</h3>
+          <canvas id="income-expense-chart" aria-label="Income versus expense chart"></canvas>
+        </div>
+      </div>
+    </section>
+
+    <section id="budget-section" aria-labelledby="budget-heading">
+      <h2 id="budget-heading">Monthly Budget</h2>
+
+      <div class="budget-panel">
+        <form id="budget-form" autocomplete="off">
+          <div class="form-row">
+            <label for="budget-amount">Budget Amount</label>
+            <input type="number" id="budget-amount" name="budget-amount" placeholder="0.00" step="0.01" min="0" />
+          </div>
+
+          <div class="form-actions">
+            <button type="submit">Save Budget</button>
+          </div>
+        </form>
+
+        <div class="budget-summary" aria-live="polite">
+          <div class="budget-summary-item">
+            <span class="budget-label">Monthly Budget</span>
+            <strong id="monthly-budget-value">$0.00</strong>
+          </div>
+
+          <div class="budget-summary-item">
+            <span class="budget-label">Total Spent</span>
+            <strong id="budget-total-spent">$0.00</strong>
+          </div>
+
+          <div class="budget-summary-item">
+            <span class="budget-label">Remaining</span>
+            <strong id="budget-remaining">$0.00</strong>
+          </div>
+        </div>
+
+        <p id="budget-warning" class="budget-warning" hidden>
+          Warning: Your spending is above your monthly budget.
+        </p>
       </div>
     </section>
 
@@ -151,8 +209,30 @@
       <h2 id="expenses-heading">Expenses</h2>
       <p class="help-text">Below is a list of recorded expenses. Use the actions to edit or delete items.</p>
 
-      <!-- Category filter control (shows All by default) -->
+      <!-- Category and date filter controls -->
       <div class="table-controls">
+        <label for="month-filter" class="visually-hidden">Filter by month</label>
+        <select id="month-filter" aria-label="Filter by month">
+          <option value="all">All Time</option>
+          <option value="1">January</option>
+          <option value="2">February</option>
+          <option value="3">March</option>
+          <option value="4">April</option>
+          <option value="5">May</option>
+          <option value="6">June</option>
+          <option value="7">July</option>
+          <option value="8">August</option>
+          <option value="9">September</option>
+          <option value="10">October</option>
+          <option value="11">November</option>
+          <option value="12">December</option>
+        </select>
+
+        <label for="year-filter" class="visually-hidden">Filter by year</label>
+        <select id="year-filter" aria-label="Filter by year">
+          <option value="all">All Time</option>
+        </select>
+
         <label for="category-filter" class="visually-hidden">Filter by category</label>
         <select id="category-filter" aria-label="Filter expenses by category">
           <option value="all">All Categories</option>
@@ -162,6 +242,17 @@
           <option value="entertainment">Entertainment</option>
           <option value="other">Other</option>
         </select>
+      </div>
+
+      <div class="table-controls" style="margin-top: 0.75rem;">
+        <label for="expense-search" class="visually-hidden">Search expenses</label>
+        <input
+          id="expense-search"
+          type="text"
+          placeholder="Search expenses by description, category, or amount"
+          aria-label="Search expenses"
+          style="width: 100%; max-width: 420px; padding: 0.6rem 0.75rem; border-radius: 8px; border: 1px solid var(--border); background: #fff; color: var(--text);"
+        />
       </div>
 
       <div class="table-wrap">
