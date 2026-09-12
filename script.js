@@ -884,23 +884,9 @@ const supabaseClient = window.supabase.createClient(
     const monthFilterSelect = document.getElementById('month-filter');
     const yearFilterSelect = document.getElementById('year-filter');
     const expenseSearchInput = document.getElementById('expense-search');
-    const themeToggleBtn = document.getElementById('theme-toggle');
-
-    applySavedTheme();
-    updateWelcomeMessage(user);
-
-    if (themeToggleBtn) {
-      themeToggleBtn.addEventListener('click', () => {
-        const isDark = document.body.classList.contains('dark-theme');
-        const nextTheme = isDark ? 'light' : 'dark';
-
-        document.body.classList.toggle('dark-theme', nextTheme === 'dark');
-        localStorage.setItem('expense-tracker-theme', nextTheme);
-
-        themeToggleBtn.textContent = nextTheme === 'dark' ? '☀️ Light' : '🌙 Dark';
-        themeToggleBtn.setAttribute('aria-label', nextTheme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode');
-      });
-    }
+ 
+      
+    
 
     if (categoryFilterSelect) {
       categoryFilterSelect.addEventListener('change', (event) => {
@@ -1019,6 +1005,25 @@ const supabaseClient = window.supabase.createClient(
     });
 
     loadBudgetForSelectedMonth(user);
+  }
+
+  applySavedTheme();
+
+  const themeToggleBtn = document.getElementById('theme-toggle');
+  if (themeToggleBtn) {
+    themeToggleBtn.addEventListener('click', () => {
+      const isDark = document.body.classList.contains('dark-theme');
+      const nextTheme = isDark ? 'light' : 'dark';
+
+      document.body.classList.toggle('dark-theme', nextTheme === 'dark');
+      localStorage.setItem('expense-tracker-theme', nextTheme);
+
+      themeToggleBtn.textContent = nextTheme === 'dark' ? '☀️ Light' : '🌙 Dark';
+      themeToggleBtn.setAttribute(
+        'aria-label',
+        nextTheme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'
+      );
+    });
   }
 
   document.addEventListener('DOMContentLoaded', async () => {
