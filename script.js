@@ -1,25 +1,30 @@
 ﻿// Expense Tracker - script.js
 // Beginner-friendly JavaScript.
-// Authentication is handled only through Supabase Auth.
-// Expenses and incomes are stored and loaded from Supabase Database.
+// Demo authentication is local-only and is enabled on local development origins.
+// Deployed hosts continue to use the existing Supabase authentication flow.
 
 const SUPABASE_URL = "https://dubfhynzysmkhiovfyhr.supabase.co";
 const SUPABASE_KEY = "sb_publishable__JvzSmVDFFJD0itosfI8cQ_HBQkoPIQ";
 const LARGE_EXPENSE_THRESHOLD = 500;
+const DEMO_MODE = window.location.protocol === 'file:'
+  || ['localhost', '127.0.0.1', '[::1]'].includes(window.location.hostname);
 
-const supabaseClient = window.supabase.createClient(
-  SUPABASE_URL,
-  SUPABASE_KEY,
-  {
-    auth: {
-      persistSession: true,
-      autoRefreshToken: true,
-      detectSessionInUrl: true
+const supabaseClient = DEMO_MODE ? null : window.supabase.createClient(
+    SUPABASE_URL,
+    SUPABASE_KEY,
+    {
+      auth: {
+        persistSession: true,
+        autoRefreshToken: true,
+        detectSessionInUrl: true
+      }
     }
-  }
 );
 
 (function () {
+  const DEMO_SESSION_KEY = 'expense-tracker-demo-session';
+  const DEMO_DATA_PREFIX = 'expense-tracker-demo-data-';
+
   let expenses = [];
   let incomes = [];
   let currentCategoryFilter = 'all';
@@ -33,7 +38,97 @@ const supabaseClient = window.supabase.createClient(
   let authRedirectListenerRegistered = false;
   let dashboardInitialized = false;
 
+  function getDemoUser() {
+    const serializedUser = sessionStorage.getItem(DEMO_SESSION_KEY)
+      || localStorage.getItem(DEMO_SESSION_KEY);
+
+    if (!serializedUser) return null;
+
+    const user = JSON.parse(serializedUser);
+    if (!user || typeof user.id !== 'string' || typeof user.email !== 'string') {
+      throw new Error('The saved demo session is invalid. Please log in again.');
+    }
+
+    return user;
+  }
+
+  function saveDemoUser(user, rememberMe) {
+    sessionStorage.removeItem(DEMO_SESSION_KEY);
+    localStorage.removeItem(DEMO_SESSION_KEY);
+    (rememberMe ? localStorage : sessionStorage).setItem(DEMO_SESSION_KEY, JSON.stringify(user));
+  }
+
+  function getDemoData(user) {
+    const storageKey = DEMO_DATA_PREFIX + encodeURIComponent(user.id);
+    const serializedData = localStorage.getItem(storageKey);
+
+    if (!serializedData) {
+      const today = new Date().toISOString().slice(0, 10);
+      const now = new Date();
+      const demoData = {
+        expenses: [
+          {
+            id: createDemoRecordId(),
+            user_id: user.id,
+            description: 'Groceries',
+            amount: 86.4,
+            category: 'food',
+            date: today
+          },
+          {
+            id: createDemoRecordId(),
+            user_id: user.id,
+            description: 'Transport pass',
+            amount: 42.5,
+            category: 'transport',
+            date: today
+          }
+        ],
+        incomes: [
+          {
+            id: createDemoRecordId(),
+            user_id: user.id,
+            description: 'Monthly salary',
+            amount: 3200,
+            date: today
+          }
+        ],
+        budgets: [
+          {
+            id: createDemoRecordId(),
+            user_id: user.id,
+            month: now.getMonth() + 1,
+            year: now.getFullYear(),
+            amount: 1200
+          }
+        ]
+      };
+      saveDemoData(user, demoData);
+      return demoData;
+    }
+
+    const data = JSON.parse(serializedData);
+    if (!data || !Array.isArray(data.expenses) || !Array.isArray(data.incomes) || !Array.isArray(data.budgets)) {
+      throw new Error('Saved demo records are invalid. Clear this site’s local storage and try again.');
+    }
+
+    return data;
+  }
+
+  function saveDemoData(user, data) {
+    const storageKey = DEMO_DATA_PREFIX + encodeURIComponent(user.id);
+    localStorage.setItem(storageKey, JSON.stringify(data));
+  }
+
+  function createDemoRecordId() {
+    return `demo-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  }
+
   async function getCurrentSupabaseUser() {
+    if (DEMO_MODE) {
+      return getDemoUser();
+    }
+
     try {
       const { data: { session }, error } = await supabaseClient.auth.getSession();
 
@@ -50,7 +145,7 @@ const supabaseClient = window.supabase.createClient(
   }
 
   function registerAuthRedirectListener() {
-    if (authRedirectListenerRegistered) {
+    if (DEMO_MODE || authRedirectListenerRegistered) {
       return;
     }
 
@@ -92,6 +187,13 @@ const supabaseClient = window.supabase.createClient(
 
     if (welcomeMessage) {
       welcomeMessage.textContent = '';
+    }
+
+    if (DEMO_MODE) {
+      sessionStorage.removeItem(DEMO_SESSION_KEY);
+      localStorage.removeItem(DEMO_SESSION_KEY);
+      window.location.href = 'index.html';
+      return;
     }
 
     const { error } = await supabaseClient.auth.signOut();
@@ -138,7 +240,7 @@ const supabaseClient = window.supabase.createClient(
         return;
       }
 
-      const { error } = await supabaseClient.functions.invoke('resend-email', {
+      const { error } = await supabaseClient.functions.invoke('send-email-alert', {
         body: {
           type,
           email: payload.email || user.email,
@@ -307,6 +409,15 @@ const supabaseClient = window.supabase.createClient(
 
     const { month, year } = getBudgetTargetPeriod();
 
+    if (DEMO_MODE) {
+      const demoData = getDemoData(user);
+      currentBudget = demoData.budgets.find((budget) => budget.month === month && budget.year === year) || null;
+      expenses = demoData.expenses;
+      updateBudgetSummary();
+      renderExpenses();
+      return;
+    }
+
     const { data: budgetData, error: budgetError } = await supabaseClient
       .from('budgets')
       .select('*')
@@ -349,6 +460,28 @@ const supabaseClient = window.supabase.createClient(
     }
 
     const { month, year } = getBudgetTargetPeriod();
+
+    if (DEMO_MODE) {
+      const demoData = getDemoData(user);
+      const existingBudget = demoData.budgets.find((budget) => budget.month === month && budget.year === year);
+
+      if (existingBudget) {
+        existingBudget.amount = Number(amountValue.toFixed(2));
+      } else {
+        demoData.budgets.push({
+          id: createDemoRecordId(),
+          user_id: user.id,
+          month,
+          year,
+          amount: Number(amountValue.toFixed(2))
+        });
+      }
+
+      saveDemoData(user, demoData);
+      await loadBudgetForSelectedMonth(user);
+      if (budgetInput) budgetInput.value = '';
+      return;
+    }
 
     const { error } = await supabaseClient
       .from('budgets')
@@ -627,6 +760,13 @@ const supabaseClient = window.supabase.createClient(
   }
 
   async function loadExpensesForCurrentUser(user) {
+    if (DEMO_MODE) {
+      expenses = getDemoData(user).expenses;
+      renderExpenses();
+      updateTotals();
+      return;
+    }
+
     const { data, error } = await supabaseClient
       .from('expenses')
       .select('*')
@@ -647,6 +787,13 @@ const supabaseClient = window.supabase.createClient(
   }
 
   async function loadIncomesForCurrentUser(user) {
+    if (DEMO_MODE) {
+      incomes = getDemoData(user).incomes;
+      renderIncomes();
+      updateTotals();
+      return;
+    }
+
     const { data, error } = await supabaseClient
       .from('incomes')
       .select('*')
@@ -667,6 +814,18 @@ const supabaseClient = window.supabase.createClient(
   }
 
   async function addExpenseToDatabase(user, expenseData) {
+    if (DEMO_MODE) {
+      const demoData = getDemoData(user);
+      demoData.expenses.push({
+        id: createDemoRecordId(),
+        user_id: user.id,
+        ...expenseData
+      });
+      saveDemoData(user, demoData);
+      await loadExpensesForCurrentUser(user);
+      return;
+    }
+
     const { error } = await supabaseClient
       .from('expenses')
       .insert([
@@ -705,6 +864,18 @@ const supabaseClient = window.supabase.createClient(
   }
 
   async function addIncomeToDatabase(user, incomeData) {
+    if (DEMO_MODE) {
+      const demoData = getDemoData(user);
+      demoData.incomes.push({
+        id: createDemoRecordId(),
+        user_id: user.id,
+        ...incomeData
+      });
+      saveDemoData(user, demoData);
+      await loadIncomesForCurrentUser(user);
+      return;
+    }
+
     const { error } = await supabaseClient
       .from('incomes')
       .insert([
@@ -732,6 +903,19 @@ const supabaseClient = window.supabase.createClient(
       return;
     }
 
+    if (DEMO_MODE) {
+      const demoData = getDemoData(user);
+      const remainingExpenses = demoData.expenses.filter((expense) => String(expense.id) !== String(id));
+      if (remainingExpenses.length === demoData.expenses.length) {
+        alert('Expense not found.');
+        return;
+      }
+      demoData.expenses = remainingExpenses;
+      saveDemoData(user, demoData);
+      await loadExpensesForCurrentUser(user);
+      return;
+    }
+
     const { error } = await supabaseClient
       .from('expenses')
       .delete()
@@ -751,6 +935,19 @@ const supabaseClient = window.supabase.createClient(
 
     if (!user) {
       window.location.href = 'login.html';
+      return;
+    }
+
+    if (DEMO_MODE) {
+      const demoData = getDemoData(user);
+      const remainingIncomes = demoData.incomes.filter((income) => String(income.id) !== String(id));
+      if (remainingIncomes.length === demoData.incomes.length) {
+        alert('Income not found.');
+        return;
+      }
+      demoData.incomes = remainingIncomes;
+      saveDemoData(user, demoData);
+      await loadIncomesForCurrentUser(user);
       return;
     }
 
@@ -806,6 +1003,24 @@ const supabaseClient = window.supabase.createClient(
       return;
     }
 
+    if (DEMO_MODE) {
+      const demoData = getDemoData(user);
+      const demoExpense = demoData.expenses.find((item) => String(item.id) === String(id));
+      if (!demoExpense) {
+        alert('Expense not found.');
+        return;
+      }
+      Object.assign(demoExpense, {
+        description: newDescription.trim(),
+        amount: Number(parsedAmount.toFixed(2)),
+        category: newCategory.trim(),
+        date: newDate
+      });
+      saveDemoData(user, demoData);
+      await loadExpensesForCurrentUser(user);
+      return;
+    }
+
     const { error } = await supabaseClient
       .from('expenses')
       .update({
@@ -857,6 +1072,23 @@ const supabaseClient = window.supabase.createClient(
 
     if (isNaN(parsedAmount) || parsedAmount <= 0) {
       alert('Please enter a valid amount greater than 0.');
+      return;
+    }
+
+    if (DEMO_MODE) {
+      const demoData = getDemoData(user);
+      const demoIncome = demoData.incomes.find((item) => String(item.id) === String(id));
+      if (!demoIncome) {
+        alert('Income not found.');
+        return;
+      }
+      Object.assign(demoIncome, {
+        description: newDescription.trim(),
+        amount: Number(parsedAmount.toFixed(2)),
+        date: newDate
+      });
+      saveDemoData(user, demoData);
+      await loadIncomesForCurrentUser(user);
       return;
     }
 
@@ -930,6 +1162,11 @@ const supabaseClient = window.supabase.createClient(
   }
 
   async function handleGoogleSignIn() {
+    if (DEMO_MODE) {
+      alert('Google sign-in is unavailable in local demo mode. Please use the demo login form.');
+      return;
+    }
+
     try {
       registerAuthRedirectListener();
 
@@ -1283,50 +1520,67 @@ const supabaseClient = window.supabase.createClient(
     const resetPasswordMessage = document.getElementById('reset-password-message');
     const googleLoginBtn = document.getElementById('google-login-btn');
     const googleSignupBtn = document.getElementById('google-signup-btn');
+    const passwordToggle = document.getElementById('toggle-password');
+    const passwordInput = document.getElementById('login-password');
+    const demoModeNotice = document.getElementById('demo-mode-notice');
+    const productionAuthOptions = document.getElementById('production-auth-options');
+    const demoStateNotice = document.getElementById('demo-state-notice');
 
     if (yearEl) {
       yearEl.textContent = new Date().getFullYear();
+    }
+
+    if (DEMO_MODE) {
+      if (demoModeNotice) demoModeNotice.hidden = false;
+      if (productionAuthOptions) productionAuthOptions.hidden = true;
+      if (showForgotPasswordBtn) showForgotPasswordBtn.hidden = true;
+    }
+
+    if (passwordToggle && passwordInput) {
+      passwordToggle.addEventListener('click', () => {
+        const showPassword = passwordInput.type === 'password';
+        passwordInput.type = showPassword ? 'text' : 'password';
+        passwordToggle.textContent = showPassword ? 'Hide' : 'Show';
+        passwordToggle.setAttribute('aria-label', showPassword ? 'Hide password' : 'Show password');
+        passwordToggle.setAttribute('aria-pressed', String(showPassword));
+      });
     }
 
     const currentPage = window.location.pathname.split('/').pop() || 'index.html';
     const isAuthPage = currentPage === 'login.html' || currentPage === 'signup.html';
     const isDashboardPage = currentPage === 'dashboard.html';
 
-    console.log('Current page loaded:', currentPage);
-    console.log('OAuth callback URL details:', {
-      href: window.location.href,
-      hash: window.location.hash,
-      search: window.location.search
-    });
-
-    const { data: { session }, error } = await supabaseClient.auth.getSession();
-    console.log('Supabase getSession on page load:', {
-      sessionExists: !!session,
-      userId: session && session.user ? session.user.id : null,
-      error: error ? error.message : null,
-      href: window.location.href,
-      hash: window.location.hash,
-      search: window.location.search
-    });
-
-    registerAuthRedirectListener();
-
-    if (isAuthPage) {
-      const { data: { session }, error } = await supabaseClient.auth.getSession();
-
-      console.log('Auth page session check:', {
-        page: currentPage,
-        sessionExists: !!session,
-        userId: session && session.user ? session.user.id : null,
-        error: error ? error.message : null
+    let session = null;
+    if (DEMO_MODE) {
+      const demoUser = getDemoUser();
+      session = demoUser ? { user: demoUser } : null;
+    } else {
+      console.log('Current page loaded:', currentPage);
+      console.log('OAuth callback URL details:', {
+        href: window.location.href,
+        hash: window.location.hash,
+        search: window.location.search
       });
 
-      if (error) {
-        console.error('Session error:', error.message);
-      }
+      const { data: { session: supabaseSession }, error } = await supabaseClient.auth.getSession();
+      session = supabaseSession;
+      console.log('Supabase getSession on page load:', {
+        sessionExists: !!session,
+        userId: session && session.user ? session.user.id : null,
+        error: error ? error.message : null,
+        href: window.location.href,
+        hash: window.location.hash,
+        search: window.location.search
+      });
 
+      registerAuthRedirectListener();
+    }
+
+    if (isAuthPage) {
       if (session && session.user) {
-        console.log('Redirecting to dashboard.html: valid session found on auth page');
+        if (!DEMO_MODE) {
+          console.log('Redirecting to dashboard.html: valid session found on auth page');
+        }
         window.location.replace('dashboard.html');
         return;
       }
@@ -1335,19 +1589,15 @@ const supabaseClient = window.supabase.createClient(
     const protectedPages = ['dashboard.html', 'expenses.html', 'income.html', 'budget.html'];
 
     if (protectedPages.includes(currentPage)) {
-      const { data: { session }, error } = await supabaseClient.auth.getSession();
-
-      if (error) {
-        console.error('Session error:', error.message);
-      }
-
       if (!session || !session.user) {
-        console.error('REDIRECTING TO LOGIN - REASON:', {
-          event: 'NO_SESSION',
-          sessionExists: !!session,
-          dashboardInitialized,
-          currentPage: window.location.pathname
-        });
+        if (!DEMO_MODE) {
+          console.error('REDIRECTING TO LOGIN - REASON:', {
+            event: 'NO_SESSION',
+            sessionExists: !!session,
+            dashboardInitialized,
+            currentPage: window.location.pathname
+          });
+        }
         window.location.replace('login.html');
         return;
       }
@@ -1367,9 +1617,15 @@ const supabaseClient = window.supabase.createClient(
         }
 
         dashboardInitialized = true;
+        if (DEMO_MODE) {
+          updateWelcomeMessage(user);
+          if (demoStateNotice) {
+            demoStateNotice.hidden = false;
+          }
+        }
 
         const welcomeKey = `welcome-email-sent-${user.id}`;
-        if (!localStorage.getItem(welcomeKey)) {
+        if (!DEMO_MODE && !localStorage.getItem(welcomeKey)) {
           await sendEmailAlert('welcome', {
             email: user.email
           });
@@ -1415,6 +1671,14 @@ const supabaseClient = window.supabase.createClient(
       forgotPasswordForm.addEventListener('submit', async (event) => {
         event.preventDefault();
 
+        if (DEMO_MODE) {
+          if (forgotPasswordMessage) {
+            forgotPasswordMessage.textContent = 'Password reset is unavailable in local demo mode.';
+            forgotPasswordMessage.style.color = '#ef4444';
+          }
+          return;
+        }
+
         const emailInput = document.getElementById('reset-email');
         const email = (emailInput ? emailInput.value : '').trim();
 
@@ -1449,6 +1713,14 @@ const supabaseClient = window.supabase.createClient(
     if (resetPasswordForm) {
       resetPasswordForm.addEventListener('submit', async (event) => {
         event.preventDefault();
+
+        if (DEMO_MODE) {
+          if (resetPasswordMessage) {
+            resetPasswordMessage.textContent = 'Password reset is unavailable in local demo mode.';
+            resetPasswordMessage.style.color = '#ef4444';
+          }
+          return;
+        }
 
         const newPasswordInput = document.getElementById('new-password');
         const confirmPasswordInput = document.getElementById('confirm-password');
@@ -1501,12 +1773,39 @@ const supabaseClient = window.supabase.createClient(
 
         const emailInput = document.getElementById('login-email');
         const passwordInput = document.getElementById('login-password');
+        const loginMessage = document.getElementById('login-message');
 
         const email = (emailInput ? emailInput.value : '').trim();
         const password = passwordInput ? passwordInput.value : '';
 
-        if (!email || !password) {
-          alert('Please enter both email and password.');
+        if (!email || !password || (emailInput && !emailInput.checkValidity())) {
+          if (loginMessage) {
+            loginMessage.textContent = !email || !password
+              ? 'Enter a valid email address and a non-empty password.'
+              : 'Enter a valid email address.';
+          }
+          if (emailInput && !emailInput.checkValidity()) emailInput.focus();
+          else if (passwordInput && !password) passwordInput.focus();
+          return;
+        }
+
+        if (DEMO_MODE) {
+          const normalizedEmail = email.toLowerCase();
+          const demoUser = {
+            id: `demo-${normalizedEmail}`,
+            email,
+            user_metadata: {
+              name: email.split('@')[0]
+            }
+          };
+          const rememberMe = document.getElementById('remember-me');
+          saveDemoUser(demoUser, !!(rememberMe && rememberMe.checked));
+
+          if (loginMessage) {
+            loginMessage.style.color = 'var(--success)';
+            loginMessage.textContent = 'Demo login successful. Opening your dashboard…';
+          }
+          window.location.href = 'dashboard.html';
           return;
         }
 
@@ -1530,6 +1829,12 @@ const supabaseClient = window.supabase.createClient(
     if (signupForm) {
       signupForm.addEventListener('submit', async (event) => {
         event.preventDefault();
+
+        if (DEMO_MODE) {
+          alert('Account creation is disabled in local demo mode. Return to login and use any valid email with a non-empty password.');
+          window.location.href = 'login.html';
+          return;
+        }
 
         const emailInput = document.getElementById('signup-email');
         const passwordInput = document.getElementById('signup-password');

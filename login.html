@@ -8,51 +8,82 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="script.js" defer></script>
 </head>
-<body>
-  <main class="container">
-    <section aria-labelledby="login-heading" class="card" style="max-width:480px; margin:3rem auto;">
-      <h2 id="login-heading">Welcome back</h2>
-      <p class="help-text">Log in to access your Expense Tracker dashboard.</p>
+<body class="login-page">
+  <main class="login-shell">
+    <section class="login-card" aria-labelledby="login-heading">
+      <div class="login-intro">
+        <a class="login-brand" href="index.html" aria-label="Expense Tracker home">
+          <span class="brand-mark" aria-hidden="true">€</span>
+          <span>Expense Tracker</span>
+        </a>
 
-      <form id="login-form" autocomplete="off">
-        <div class="form-row">
-          <label for="login-email">Email</label>
-          <input type="email" id="login-email" name="login-email" placeholder="you@example.com" required />
+        <div class="login-welcome">
+          <p class="eyebrow">Your finances, in focus</p>
+          <h1 id="login-heading">Welcome back</h1>
+          <p class="help-text">Log in to see your balance, track spending, and keep your financial plans moving.</p>
         </div>
 
-        <div class="form-row">
-          <label for="login-password">Password</label>
-          <input type="password" id="login-password" name="login-password" placeholder="Enter your password" required />
+        <div class="login-highlight" aria-hidden="true">
+          <span class="login-highlight-icon">↗</span>
+          <span><strong>Make every dollar count.</strong><br />A clearer picture starts here.</span>
         </div>
-
-        <div class="form-actions">
-          <button type="submit">Log in</button>
-          <a href="signup.html" class="action-btn" style="text-decoration:none;">Sign up</a>
-        </div>
-      </form>
-
-      <div class="divider" aria-hidden="true"><span>or</span></div>
-      <button id="google-login-btn" type="button" class="google-button">Continue with Google</button>
-
-      <p class="help-text" style="margin-top:0.75rem;">
-        <button id="show-forgot-password" type="button" class="link-button">Forgot Password?</button>
-      </p>
-
-      <div id="forgot-password-box" hidden style="margin-top:1rem;">
-        <form id="forgot-password-form" autocomplete="off">
-          <div class="form-row">
-            <label for="reset-email">Email address</label>
-            <input type="email" id="reset-email" name="reset-email" placeholder="you@example.com" required />
-          </div>
-
-          <div class="form-actions">
-            <button type="submit">Send Reset Link</button>
-          </div>
-        </form>
-        <p id="forgot-password-message" class="help-text" style="margin-top:0.75rem;"></p>
       </div>
 
-      <p class="help-text" style="margin-top:1rem;">Demo accounts are stored locally in your browser. This demo authentication is client-side only and not secure — do not use real passwords.</p>
+      <div class="login-form-panel">
+        <p class="eyebrow">Account access</p>
+        <h2>Log in to your account</h2>
+        <p class="help-text">Enter your email and password to continue.</p>
+        <p id="demo-mode-notice" class="demo-mode-notice" hidden>
+          Demo mode is on. Use any valid email and any non-empty password.
+        </p>
+
+        <form id="login-form" autocomplete="on">
+          <div class="form-row">
+            <label for="login-email">Email address</label>
+            <input type="email" id="login-email" name="login-email" placeholder="you@example.com" autocomplete="email" required />
+          </div>
+
+          <div class="form-row">
+            <label for="login-password">Password</label>
+            <div class="password-field">
+              <input type="password" id="login-password" name="login-password" placeholder="Enter your password" autocomplete="current-password" required />
+              <button id="toggle-password" class="password-toggle" type="button" aria-label="Show password" aria-pressed="false">Show</button>
+            </div>
+          </div>
+
+          <div class="login-options">
+            <label class="remember-option" for="remember-me">
+              <input type="checkbox" id="remember-me" name="remember-me" />
+              <span>Remember me</span>
+            </label>
+            <button id="show-forgot-password" type="button" class="link-button">Forgot password?</button>
+          </div>
+
+          <button class="login-submit" type="submit">Login</button>
+          <p id="login-message" class="login-message" role="status" aria-live="polite"></p>
+        </form>
+
+        <div id="production-auth-options">
+          <div class="divider" aria-hidden="true"><span>or</span></div>
+          <button id="google-login-btn" type="button" class="google-button">Continue with Google</button>
+          <p class="login-signup">New here? <a href="signup.html">Create an account</a></p>
+        </div>
+
+        <div id="forgot-password-box" hidden class="forgot-password-box">
+          <form id="forgot-password-form" autocomplete="on">
+            <div class="form-row">
+              <label for="reset-email">Email address</label>
+              <input type="email" id="reset-email" name="reset-email" placeholder="you@example.com" autocomplete="email" required />
+            </div>
+            <div class="form-actions">
+              <button type="submit">Send reset link</button>
+            </div>
+          </form>
+          <p id="forgot-password-message" class="help-text" role="status" aria-live="polite"></p>
+        </div>
+
+        <p class="login-footer">Securely manage your income, expenses, and monthly budget.</p>
+      </div>
     </section>
   </main>
 </body>
