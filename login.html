@@ -34,7 +34,7 @@
         <h2>Log in to your account</h2>
         <p class="help-text">Enter your email and password to continue.</p>
         <p id="demo-mode-notice" class="demo-mode-notice" hidden>
-          Demo mode is on. Use any valid email and any non-empty password.
+          Local demo mode is on. Use the demo credentials shown below.
         </p>
 
         <form id="login-form" autocomplete="on">
@@ -51,6 +51,15 @@
             </div>
           </div>
 
+          <section class="demo-credentials" aria-labelledby="demo-credentials-heading">
+            <div class="demo-credentials-copy">
+              <h3 id="demo-credentials-heading">Demo Login Credentials</h3>
+              <p><span>Email</span><code>demo@expensetracker.com</code></p>
+              <p><span>Password</span><code>Demo@123</code></p>
+            </div>
+            <button id="use-demo-credentials" class="use-demo-credentials-btn" type="button">Use Demo Credentials</button>
+          </section>
+
           <div class="login-options">
             <label class="remember-option" for="remember-me">
               <input type="checkbox" id="remember-me" name="remember-me" />
@@ -64,8 +73,6 @@
         </form>
 
         <div id="production-auth-options">
-          <div class="divider" aria-hidden="true"><span>or</span></div>
-          <button id="google-login-btn" type="button" class="google-button">Continue with Google</button>
           <p class="login-signup">New here? <a href="signup.html">Create an account</a></p>
         </div>
 

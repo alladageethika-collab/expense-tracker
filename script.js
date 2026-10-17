@@ -6,6 +6,8 @@
 const SUPABASE_URL = "https://dubfhynzysmkhiovfyhr.supabase.co";
 const SUPABASE_KEY = "sb_publishable__JvzSmVDFFJD0itosfI8cQ_HBQkoPIQ";
 const LARGE_EXPENSE_THRESHOLD = 500;
+const DEMO_LOGIN_EMAIL = 'demo@expensetracker.com';
+const DEMO_LOGIN_PASSWORD = 'Demo@123';
 const DEMO_MODE = window.location.protocol === 'file:'
   || ['localhost', '127.0.0.1', '[::1]'].includes(window.location.hostname);
 
@@ -1546,9 +1548,9 @@ const supabaseClient = DEMO_MODE || !window.supabase ? null : window.supabase.cr
     const forgotPasswordMessage = document.getElementById('forgot-password-message');
     const resetPasswordForm = document.getElementById('reset-password-form');
     const resetPasswordMessage = document.getElementById('reset-password-message');
-    const googleLoginBtn = document.getElementById('google-login-btn');
     const googleSignupBtn = document.getElementById('google-signup-btn');
     const demoLoginBtn = document.getElementById('demo-login-btn');
+    const useDemoCredentialsBtn = document.getElementById('use-demo-credentials');
     const demoAccessPanel = document.getElementById('demo-access-panel');
     const passwordToggle = document.getElementById('toggle-password');
     const passwordInput = document.getElementById('login-password');
@@ -1684,15 +1686,21 @@ const supabaseClient = DEMO_MODE || !window.supabase ? null : window.supabase.cr
       }
     }
 
-    if (googleLoginBtn) {
-      googleLoginBtn.addEventListener('click', async () => {
+    if (googleSignupBtn) {
+      googleSignupBtn.addEventListener('click', async () => {
         await handleGoogleSignIn();
       });
     }
 
-    if (googleSignupBtn) {
-      googleSignupBtn.addEventListener('click', async () => {
-        await handleGoogleSignIn();
+    if (useDemoCredentialsBtn) {
+      useDemoCredentialsBtn.addEventListener('click', () => {
+        const emailInput = document.getElementById('login-email');
+        const passwordField = document.getElementById('login-password');
+        const loginMessage = document.getElementById('login-message');
+
+        if (emailInput) emailInput.value = DEMO_LOGIN_EMAIL;
+        if (passwordField) passwordField.value = DEMO_LOGIN_PASSWORD;
+        if (loginMessage) loginMessage.textContent = '';
       });
     }
 
@@ -1835,14 +1843,19 @@ const supabaseClient = DEMO_MODE || !window.supabase ? null : window.supabase.cr
           return;
         }
 
-        if (DEMO_MODE) {
-          const rememberMe = document.getElementById('remember-me');
-          saveDemoUser(createDemoUser(email), !!(rememberMe && rememberMe.checked));
-
-          if (loginMessage) {
-            loginMessage.style.color = 'var(--success)';
-            loginMessage.textContent = 'Demo login successful. Opening your dashboard…';
+        if (DEMO_MODE || email.toLowerCase() === DEMO_LOGIN_EMAIL) {
+          if (email.toLowerCase() !== DEMO_LOGIN_EMAIL || password !== DEMO_LOGIN_PASSWORD) {
+            if (loginMessage) {
+              loginMessage.textContent = 'Invalid demo credentials. Please use the credentials shown on this page.';
+            }
+            return;
           }
+
+          const rememberMe = document.getElementById('remember-me');
+          saveDemoUser(
+            createDemoUser(DEMO_LOGIN_EMAIL),
+            !!(rememberMe && rememberMe.checked)
+          );
           window.location.href = 'dashboard.html';
           return;
         }

@@ -1182,6 +1182,59 @@ tbody tr:hover {
   box-shadow: none;
 }
 
+.demo-credentials {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin: 0.15rem 0 1.2rem;
+  padding: 0.9rem 1rem;
+  border: 1px solid rgba(79,70,229,0.2);
+  border-radius: 12px;
+  background: rgba(79,70,229,0.045);
+}
+
+.demo-credentials-copy {
+  min-width: 0;
+}
+
+.demo-credentials h3 {
+  margin: 0 0 0.45rem;
+  color: var(--accent-600);
+  font-size: 0.88rem;
+}
+
+.demo-credentials p {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.6rem;
+  margin: 0.2rem 0 0;
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.demo-credentials code {
+  overflow-wrap: anywhere;
+  color: var(--text);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.84rem;
+  font-weight: 650;
+}
+
+.use-demo-credentials-btn {
+  flex: 0 0 auto;
+  padding: 0.6rem 0.75rem;
+  border: 1px solid var(--accent-300);
+  background: var(--card-bg);
+  color: var(--accent-600);
+  font-size: 0.82rem;
+}
+
+.use-demo-credentials-btn:hover {
+  background: rgba(79,70,229,0.07);
+  transform: translateY(-1px);
+}
+
 .login-options {
   display: flex;
   align-items: center;
@@ -1336,5 +1389,15 @@ body.dark-theme.login-page {
 
   .login-form-panel {
     padding: 1.75rem 1.5rem;
+  }
+
+  .demo-credentials {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .use-demo-credentials-btn {
+    width: 100%;
   }
 }
