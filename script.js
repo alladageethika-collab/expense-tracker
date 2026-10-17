@@ -1,7 +1,7 @@
 ﻿// Expense Tracker - script.js
 // Beginner-friendly JavaScript.
-// Demo authentication is local-only and is enabled on local development origins.
-// Deployed hosts continue to use the existing Supabase authentication flow.
+// Local origins use demo authentication; deployed login stays on Supabase.
+// A separate, explicit sample-dashboard action is available without touching production auth.
 
 const SUPABASE_URL = "https://dubfhynzysmkhiovfyhr.supabase.co";
 const SUPABASE_KEY = "sb_publishable__JvzSmVDFFJD0itosfI8cQ_HBQkoPIQ";
@@ -9,7 +9,7 @@ const LARGE_EXPENSE_THRESHOLD = 500;
 const DEMO_MODE = window.location.protocol === 'file:'
   || ['localhost', '127.0.0.1', '[::1]'].includes(window.location.hostname);
 
-const supabaseClient = DEMO_MODE ? null : window.supabase.createClient(
+const supabaseClient = DEMO_MODE || !window.supabase ? null : window.supabase.createClient(
     SUPABASE_URL,
     SUPABASE_KEY,
     {
@@ -50,6 +50,25 @@ const supabaseClient = DEMO_MODE ? null : window.supabase.createClient(
     }
 
     return user;
+  }
+
+  function isDemoUser(user) {
+    return !!user
+      && typeof user.id === 'string'
+      && user.id.startsWith('demo-')
+      && typeof user.email === 'string';
+  }
+
+  function createDemoUser(email) {
+    const normalizedEmail = email.trim().toLowerCase();
+
+    return {
+      id: `demo-${normalizedEmail}`,
+      email: email.trim(),
+      user_metadata: {
+        name: email.trim().split('@')[0]
+      }
+    };
   }
 
   function saveDemoUser(user, rememberMe) {
@@ -125,8 +144,13 @@ const supabaseClient = DEMO_MODE ? null : window.supabase.createClient(
   }
 
   async function getCurrentSupabaseUser() {
+    const demoUser = getDemoUser();
+    if (isDemoUser(demoUser)) {
+      return demoUser;
+    }
+
     if (DEMO_MODE) {
-      return getDemoUser();
+      return null;
     }
 
     try {
@@ -189,7 +213,7 @@ const supabaseClient = DEMO_MODE ? null : window.supabase.createClient(
       welcomeMessage.textContent = '';
     }
 
-    if (DEMO_MODE) {
+    if (DEMO_MODE || isDemoUser(getDemoUser())) {
       sessionStorage.removeItem(DEMO_SESSION_KEY);
       localStorage.removeItem(DEMO_SESSION_KEY);
       window.location.href = 'index.html';
@@ -232,6 +256,10 @@ const supabaseClient = DEMO_MODE ? null : window.supabase.createClient(
   }
 
   async function sendEmailAlert(type, payload = {}) {
+    if (DEMO_MODE || isDemoUser(getDemoUser())) {
+      return;
+    }
+
     try {
       const { data: { user }, error: userError } = await supabaseClient.auth.getUser();
 
@@ -409,7 +437,7 @@ const supabaseClient = DEMO_MODE ? null : window.supabase.createClient(
 
     const { month, year } = getBudgetTargetPeriod();
 
-    if (DEMO_MODE) {
+    if (isDemoUser(user)) {
       const demoData = getDemoData(user);
       currentBudget = demoData.budgets.find((budget) => budget.month === month && budget.year === year) || null;
       expenses = demoData.expenses;
@@ -461,7 +489,7 @@ const supabaseClient = DEMO_MODE ? null : window.supabase.createClient(
 
     const { month, year } = getBudgetTargetPeriod();
 
-    if (DEMO_MODE) {
+    if (isDemoUser(user)) {
       const demoData = getDemoData(user);
       const existingBudget = demoData.budgets.find((budget) => budget.month === month && budget.year === year);
 
@@ -760,7 +788,7 @@ const supabaseClient = DEMO_MODE ? null : window.supabase.createClient(
   }
 
   async function loadExpensesForCurrentUser(user) {
-    if (DEMO_MODE) {
+    if (isDemoUser(user)) {
       expenses = getDemoData(user).expenses;
       renderExpenses();
       updateTotals();
@@ -787,7 +815,7 @@ const supabaseClient = DEMO_MODE ? null : window.supabase.createClient(
   }
 
   async function loadIncomesForCurrentUser(user) {
-    if (DEMO_MODE) {
+    if (isDemoUser(user)) {
       incomes = getDemoData(user).incomes;
       renderIncomes();
       updateTotals();
@@ -814,7 +842,7 @@ const supabaseClient = DEMO_MODE ? null : window.supabase.createClient(
   }
 
   async function addExpenseToDatabase(user, expenseData) {
-    if (DEMO_MODE) {
+    if (isDemoUser(user)) {
       const demoData = getDemoData(user);
       demoData.expenses.push({
         id: createDemoRecordId(),
@@ -864,7 +892,7 @@ const supabaseClient = DEMO_MODE ? null : window.supabase.createClient(
   }
 
   async function addIncomeToDatabase(user, incomeData) {
-    if (DEMO_MODE) {
+    if (isDemoUser(user)) {
       const demoData = getDemoData(user);
       demoData.incomes.push({
         id: createDemoRecordId(),
@@ -903,7 +931,7 @@ const supabaseClient = DEMO_MODE ? null : window.supabase.createClient(
       return;
     }
 
-    if (DEMO_MODE) {
+    if (isDemoUser(user)) {
       const demoData = getDemoData(user);
       const remainingExpenses = demoData.expenses.filter((expense) => String(expense.id) !== String(id));
       if (remainingExpenses.length === demoData.expenses.length) {
@@ -938,7 +966,7 @@ const supabaseClient = DEMO_MODE ? null : window.supabase.createClient(
       return;
     }
 
-    if (DEMO_MODE) {
+    if (isDemoUser(user)) {
       const demoData = getDemoData(user);
       const remainingIncomes = demoData.incomes.filter((income) => String(income.id) !== String(id));
       if (remainingIncomes.length === demoData.incomes.length) {
@@ -1003,7 +1031,7 @@ const supabaseClient = DEMO_MODE ? null : window.supabase.createClient(
       return;
     }
 
-    if (DEMO_MODE) {
+    if (isDemoUser(user)) {
       const demoData = getDemoData(user);
       const demoExpense = demoData.expenses.find((item) => String(item.id) === String(id));
       if (!demoExpense) {
@@ -1075,7 +1103,7 @@ const supabaseClient = DEMO_MODE ? null : window.supabase.createClient(
       return;
     }
 
-    if (DEMO_MODE) {
+    if (isDemoUser(user)) {
       const demoData = getDemoData(user);
       const demoIncome = demoData.incomes.find((item) => String(item.id) === String(id));
       if (!demoIncome) {
@@ -1520,6 +1548,8 @@ const supabaseClient = DEMO_MODE ? null : window.supabase.createClient(
     const resetPasswordMessage = document.getElementById('reset-password-message');
     const googleLoginBtn = document.getElementById('google-login-btn');
     const googleSignupBtn = document.getElementById('google-signup-btn');
+    const demoLoginBtn = document.getElementById('demo-login-btn');
+    const demoAccessPanel = document.getElementById('demo-access-panel');
     const passwordToggle = document.getElementById('toggle-password');
     const passwordInput = document.getElementById('login-password');
     const demoModeNotice = document.getElementById('demo-mode-notice');
@@ -1534,6 +1564,7 @@ const supabaseClient = DEMO_MODE ? null : window.supabase.createClient(
       if (demoModeNotice) demoModeNotice.hidden = false;
       if (productionAuthOptions) productionAuthOptions.hidden = true;
       if (showForgotPasswordBtn) showForgotPasswordBtn.hidden = true;
+      if (demoAccessPanel) demoAccessPanel.hidden = true;
     }
 
     if (passwordToggle && passwordInput) {
@@ -1551,10 +1582,12 @@ const supabaseClient = DEMO_MODE ? null : window.supabase.createClient(
     const isDashboardPage = currentPage === 'dashboard.html';
 
     let session = null;
-    if (DEMO_MODE) {
-      const demoUser = getDemoUser();
-      session = demoUser ? { user: demoUser } : null;
-    } else {
+    const demoUser = getDemoUser();
+    if (isDemoUser(demoUser)) {
+      session = { user: demoUser };
+    } else if (DEMO_MODE) {
+      session = null;
+    } else if (supabaseClient) {
       console.log('Current page loaded:', currentPage);
       console.log('OAuth callback URL details:', {
         href: window.location.href,
@@ -1574,6 +1607,8 @@ const supabaseClient = DEMO_MODE ? null : window.supabase.createClient(
       });
 
       registerAuthRedirectListener();
+    } else {
+      console.error('Supabase authentication is unavailable because its client SDK did not load.');
     }
 
     if (isAuthPage) {
@@ -1617,7 +1652,7 @@ const supabaseClient = DEMO_MODE ? null : window.supabase.createClient(
         }
 
         dashboardInitialized = true;
-        if (DEMO_MODE) {
+        if (isDemoUser(user)) {
           updateWelcomeMessage(user);
           if (demoStateNotice) {
             demoStateNotice.hidden = false;
@@ -1625,7 +1660,7 @@ const supabaseClient = DEMO_MODE ? null : window.supabase.createClient(
         }
 
         const welcomeKey = `welcome-email-sent-${user.id}`;
-        if (!DEMO_MODE && !localStorage.getItem(welcomeKey)) {
+        if (!isDemoUser(user) && !localStorage.getItem(welcomeKey)) {
           await sendEmailAlert('welcome', {
             email: user.email
           });
@@ -1661,6 +1696,17 @@ const supabaseClient = DEMO_MODE ? null : window.supabase.createClient(
       });
     }
 
+    if (demoLoginBtn) {
+      demoLoginBtn.addEventListener('click', () => {
+        const rememberMe = document.getElementById('remember-me');
+        saveDemoUser(
+          createDemoUser('demo@expense-tracker.local'),
+          !!(rememberMe && rememberMe.checked)
+        );
+        window.location.href = 'dashboard.html';
+      });
+    }
+
     if (showForgotPasswordBtn && forgotPasswordBox) {
       showForgotPasswordBtn.addEventListener('click', () => {
         forgotPasswordBox.hidden = !forgotPasswordBox.hidden;
@@ -1671,9 +1717,9 @@ const supabaseClient = DEMO_MODE ? null : window.supabase.createClient(
       forgotPasswordForm.addEventListener('submit', async (event) => {
         event.preventDefault();
 
-        if (DEMO_MODE) {
+        if (DEMO_MODE || isDemoUser(getDemoUser())) {
           if (forgotPasswordMessage) {
-            forgotPasswordMessage.textContent = 'Password reset is unavailable in local demo mode.';
+            forgotPasswordMessage.textContent = 'Password reset is unavailable in demo mode.';
             forgotPasswordMessage.style.color = '#ef4444';
           }
           return;
@@ -1714,9 +1760,9 @@ const supabaseClient = DEMO_MODE ? null : window.supabase.createClient(
       resetPasswordForm.addEventListener('submit', async (event) => {
         event.preventDefault();
 
-        if (DEMO_MODE) {
+        if (DEMO_MODE || isDemoUser(getDemoUser())) {
           if (resetPasswordMessage) {
-            resetPasswordMessage.textContent = 'Password reset is unavailable in local demo mode.';
+            resetPasswordMessage.textContent = 'Password reset is unavailable in demo mode.';
             resetPasswordMessage.style.color = '#ef4444';
           }
           return;
@@ -1790,16 +1836,8 @@ const supabaseClient = DEMO_MODE ? null : window.supabase.createClient(
         }
 
         if (DEMO_MODE) {
-          const normalizedEmail = email.toLowerCase();
-          const demoUser = {
-            id: `demo-${normalizedEmail}`,
-            email,
-            user_metadata: {
-              name: email.split('@')[0]
-            }
-          };
           const rememberMe = document.getElementById('remember-me');
-          saveDemoUser(demoUser, !!(rememberMe && rememberMe.checked));
+          saveDemoUser(createDemoUser(email), !!(rememberMe && rememberMe.checked));
 
           if (loginMessage) {
             loginMessage.style.color = 'var(--success)';
@@ -1809,19 +1847,30 @@ const supabaseClient = DEMO_MODE ? null : window.supabase.createClient(
           return;
         }
 
-        const { data, error } = await supabaseClient.auth.signInWithPassword({
-          email,
-          password
-        });
+        try {
+          const { data, error } = await supabaseClient.auth.signInWithPassword({
+            email,
+            password
+          });
 
-        if (error) {
-          alert(error.message);
-          return;
-        }
+          if (error) {
+            if (loginMessage) {
+              const networkFailure = /failed to fetch|networkerror|load failed/i.test(error.message);
+              loginMessage.textContent = networkFailure
+                ? 'Could not reach Supabase Auth (Failed to fetch). Check the configured project URL and availability, or use the isolated sample dashboard below.'
+                : error.message;
+            }
+            return;
+          }
 
-        if (data && data.user) {
-          alert('Login successful!');
-          window.location.href = 'dashboard.html';
+          if (data && data.user) {
+            window.location.href = 'dashboard.html';
+          }
+        } catch (error) {
+          console.error('Supabase login request failed:', error);
+          if (loginMessage) {
+            loginMessage.textContent = 'The authentication service could not be reached. Check the Supabase project URL and availability, or use the isolated sample dashboard.';
+          }
         }
       });
     }
